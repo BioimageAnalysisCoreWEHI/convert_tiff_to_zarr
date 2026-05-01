@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/your-org/convert_tiff_to_zarr/main/nextflow_schema.json",
+  "title": "convert_tiff_to_zarr pipeline parameters",
+  "description": "Convert large multi-channel TIFF images to OME-Zarr using ngff-zarr",
+  "type": "object",
+  "$defs": {
+    "input_output_options": {
+      "title": "Input/output options",
+      "type": "object",
+      "required": ["input", "outdir"],
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "Glob pattern for input TIFF file(s), e.g. '/data/images/*.tiff'",
+          "help_text": "Supports standard glob wildcards (* and **). Each matched file is converted independently as a separate parallel job."
+        },
+        "outdir": {
+          "type": "string",
+          "format": "directory-path",
+          "description": "Output directory. OME-Zarr stores are written to outdir/zarr/, logs to outdir/logs/",
+          "default": "results"
+        },
+        "publish_dir_mode": {
+          "type": "string",
+          "default": "copy",
+          "description": "Method used by Nextflow publishDir to stage output files",
+          "enum": ["symlink", "rellink", "link", "copy", "copyNoFollow", "move"]
+        }
+      }
+    },
+    "conversion_options": {
+      "title": "Conversion options",
+      "type": "object",
+      "properties": {
+        "method": {
+          "type": "string",
+          "default": "itkwasm_gaussian",
+          "description": "Downsampling method for multiscale pyramid generation",
+          "enum": [
+            "itkwasm_gaussian",
+            "itkwasm_label_image",
+            "itkwasm_bin_shrink",
+            "itk_gaussian",
+            "itk_label_image",
+            "itk_bin_shrink",
+            "dask_image_gaussian",
+            "dask_image_mode",
+            "dask_image_nearest"
+          ],
+          "help_text": "itkwasm_gaussian (default) is web-compatible and recommended for fluorescence images. Use a label_image method for segmentation masks."
+        },
+        "ome_zarr_version": {
+          "type": "string",
+          "default": "0.5",
+          "description": "OME-Zarr specification version to write",
+          "enum": ["0.4", "0.5"]
+        },
+        "chunks": {
+          "type": "string",
+          "description": "Chunk size(s) for the Zarr arrays. Single integer for uniform chunking or space-separated integers per dimension, e.g. '64' or '1 64 64'",
+          "help_text": "Defaults to ngff-zarr's automatic chunk size selection (128 px for 3-D, 256 px for 2-D)."
+        },
+        "chunks_per_shard": {
+          "type": "string",
+          "description": "Number of chunks per shard (enables Zarr v3 sharding). Single integer or space-separated per dimension, e.g. '4' or '2 4 4'",
+          "help_text": "Only supported with --ome_zarr_version 0.5."
+        },
+        "codec": {
+          "type": "string",
+          "description": "Compression codec, e.g. 'blosc:zstd', 'blosc:lz4', 'gzip', 'zstd', 'lz4', 'none'",
+          "help_text": "Defaults to Zarr's built-in default codec."
+        },
+        "compression_level": {
+          "type": "integer",
+          "description": "Compression level (codec-dependent, e.g. 1–9 for gzip, 1–22 for zstd)"
+        },
+        "series": {
+          "type": "string",
+          "description": "Series to convert from multi-series OME-TIFF files. Can be: integer index (0, 1, 2), glob name pattern ('*GFP*'), or omit for all series",
+          "help_text": "When omitted (default), all series in a multi-series TIFF are converted and written to separate OME-Zarr stores."
+        }
+      }
+    },
+    "resource_options": {
+      "title": "Resource options",
+      "type": "object",
+      "properties": {
+        "memory_target": {
+          "type": "string",
+          "description": "Memory budget passed to ngff-zarr for internal caching decisions, e.g. '32GB'. Separate from the Nextflow job memory limit.",
+          "help_text": "When image data exceeds this threshold, ngff-zarr will spill to disk via --cache_dir."
+        },
+        "cache_dir": {
+          "type": "string",
+          "format": "directory-path",
+          "description": "Directory for ngff-zarr's disk cache when processing datasets larger than memory_target"
+        },
+        "use_tensorstore": {
+          "type": "boolean",
+          "default": false,
+          "description": "Use the TensorStore library for I/O (faster for very large datasets)"
+        }
+      }
+    },
+    "metadata_override_options": {
+      "title": "Metadata override options",
+      "type": "object",
+      "properties": {
+        "dims": {
+          "type": "string",
+          "description": "Override the dimension labels, space-separated, e.g. 'c z y x'",
+          "help_text": "Valid dimension labels: t, z, y, x, c"
+        },
+        "scale": {
+          "type": "string",
+          "description": "Override the pixel spacing (scale) per dimension as dim-value pairs, e.g. 'z 4.0 y 0.5 x 0.5'"
+        },
+        "units": {
+          "type": "string",
+          "description": "Override the physical units per spatial dimension as dim-unit pairs, e.g. 'z micrometer y micrometer x micrometer'"
+        },
+        "name": {
+          "type": "string",
+          "description": "Image name to embed in the OME-Zarr metadata"
+        }
+      }
+    },
+    "omero_options": {
+      "title": "OMERO visualization metadata options",
+      "type": "object",
+      "properties": {
+        "no_omero": {
+          "type": "boolean",
+          "default": false,
+          "description": "Disable automatic OMERO channel display metadata computation"
+        },
+        "omero_quantile_low": {
+          "type": "number",
+          "default": 0.02,
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Lower quantile for OMERO channel window start (default: 0.02)"
+        },
+        "omero_quantile_high": {
+          "type": "number",
+          "default": 0.98,
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Upper quantile for OMERO channel window end (default: 0.98)"
+        }
+      }
+    },
+    "generic_options": {
+      "title": "Generic options",
+      "type": "object",
+      "properties": {
+        "validate_params": {
+          "type": "boolean",
+          "default": true,
+          "hidden": true,
+          "description": "Validate parameters against the schema"
+        }
+      }
+    }
+  },
+  "allOf": [
+    { "$ref": "#/$defs/input_output_options" },
+    { "$ref": "#/$defs/conversion_options" },
+    { "$ref": "#/$defs/resource_options" },
+    { "$ref": "#/$defs/metadata_override_options" },
+    { "$ref": "#/$defs/omero_options" },
+    { "$ref": "#/$defs/generic_options" }
+  ]
+}
