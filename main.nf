@@ -18,7 +18,11 @@ params.validate_params  = true
 params.method           = "itkwasm_gaussian"  // see: ngff-zarr --help
 params.ome_zarr_version = "0.5"               // "0.4" or "0.5"
 params.chunks           = null                // e.g. "64"  or  "8 16 32"
-params.chunks_per_shard = null                // e.g. "4"   or  "2 4 8"
+// Zarr v3 sharding: pack many chunks into a single shard file. Drops the
+// on-disk file count by ~chunks_per_shard^ndim (e.g. 4^3 = ~64× fewer files
+// for 3-D data). Critical for clusters with strict inode quotas.
+// Requires --ome_zarr_version 0.5 (the default); ignored for 0.4.
+params.chunks_per_shard = "4"
 // Default to zstd via blosc at level 5 \u2014 strong ratio, fast decode, prevents
 // uncompressed pyramids from blowing out scratch quotas. Override with
 // `--codec none` for benchmarking or `--codec gzip` etc.

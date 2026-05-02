@@ -65,8 +65,9 @@
         },
         "chunks_per_shard": {
           "type": "string",
+          "default": "4",
           "description": "Number of chunks per shard (enables Zarr v3 sharding). Single integer or space-separated per dimension, e.g. '4' or '2 4 4'",
-          "help_text": "Only supported with --ome_zarr_version 0.5."
+          "help_text": "Default '4' packs ~64 chunks per shard for 3-D data, dramatically reducing on-disk file count and inode usage. Only supported with --ome_zarr_version 0.5. Set to '1' or null to disable sharding."
         },
         "codec": {
           "type": "string",

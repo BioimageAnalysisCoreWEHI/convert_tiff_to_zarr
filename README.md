@@ -104,7 +104,7 @@ singularity build ngff-zarr.sif docker-daemon://ngff-zarr:latest
 | `--method` | `itkwasm_gaussian` | Downsampling method |
 | `--ome_zarr_version` | `0.5` | OME-Zarr spec version (0.4 or 0.5) |
 | `--chunks` | auto | Chunk size(s), e.g. `64` or `1 64 64` |
-| `--chunks_per_shard` | none | Zarr v3 sharding (e.g. `4`) |
+| `--chunks_per_shard` | `4` | Zarr v3 sharding (e.g. `4`) — drastically reduces file count |
 | `--codec` | `blosc:zstd` | Compression codec, e.g. `blosc:zstd`, `gzip`, `none` |
 | `--compression_level` | `5` | Codec-specific level |
 | `--series` | all | Series index or glob for multi-series TIFF |
