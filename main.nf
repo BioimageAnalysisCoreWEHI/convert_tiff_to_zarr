@@ -66,8 +66,9 @@ process CONVERT_TIFF_TO_ZARR {
     // Strip common TIFF extensions to derive a clean output basename
     def base = tiff_file.name.replaceAll(/(?i)\.(ome\.)?(tiff?)$/, '')
 
-    // Pre-compute cache dir to avoid nested GString quoting issues
-    def resolved_cache_dir = params.cache_dir ? params.cache_dir.toString() : "${params.outdir}/cache"
+    // ngff-zarr reads dask 'temporary-directory' config for its cache store;
+    // set via env var to avoid the --cache-dir CLI bug (Path.makedirs AttributeError)
+    def dask_tmp = params.cache_dir ? params.cache_dir.toString() : "${params.outdir}/cache"
 
     // Build optional argument list — null entries are filtered before joining
     def opt_args = [
@@ -83,7 +84,6 @@ process CONVERT_TIFF_TO_ZARR {
         params.memory_target
             ? "--memory-target ${params.memory_target}"
             : null,
-        "--cache-dir ${resolved_cache_dir}",
         params.codec
             ? "--codec ${params.codec}"
             : null,
@@ -112,6 +112,10 @@ process CONVERT_TIFF_TO_ZARR {
 
     """
     set -euo pipefail
+
+    # Route ngff-zarr disk cache to imaging storage, not scratch
+    export DASK_TEMPORARY__DIRECTORY="${dask_tmp}"
+    mkdir -p "${dask_tmp}"
 
     if ! command -v ngff-zarr &>/dev/null; then
         echo "ERROR: ngff-zarr is not available in PATH" >&2
