@@ -3,7 +3,7 @@ nextflow.enable.dsl = 2
 // ---------------------------------------------------------------------------
 // Input / output
 // ---------------------------------------------------------------------------
-params.input            = null
+params.input_dir        = null   // directory containing .tif / .tiff / .ome.tiff images
 params.outdir           = "results"
 params.publish_dir_mode = "copy"
 params.validate_params  = true
@@ -132,11 +132,11 @@ process CONVERT_TIFF_TO_ZARR {
 // Workflow
 // ---------------------------------------------------------------------------
 workflow {
-    if (!params.input) {
+    if (!params.input_dir) {
         error(
-            "Missing required parameter: --input\n" +
-            "Provide a glob pattern for TIFF files, e.g.:\n" +
-            "  nextflow run main.nf --input '/data/images/*.tiff' --outdir results"
+            "Missing required parameter: --input_dir\n" +
+            "Provide the path to a directory containing .tif / .tiff / .ome.tiff files, e.g.:\n" +
+            "  nextflow run main.nf --input_dir '/data/images' --outdir results"
         )
     }
 
@@ -150,7 +150,11 @@ workflow {
         error "omero_quantile_low must be less than omero_quantile_high"
     }
 
-    Channel.fromPath(params.input, checkIfExists: true)
+    // Collect .tif and .tiff (covers plain TIFF and OME-TIFF with both extensions)
+    def inDir = params.input_dir.toString().replaceAll(/\/$/, '')
+    Channel
+        .fromPath(["${inDir}/*.tif", "${inDir}/*.tiff"], checkIfExists: false)
+        .ifEmpty { error("No .tif or .tiff files found in directory: ${params.input_dir}") }
         | CONVERT_TIFF_TO_ZARR
 
     CONVERT_TIFF_TO_ZARR.out.zarr_stores

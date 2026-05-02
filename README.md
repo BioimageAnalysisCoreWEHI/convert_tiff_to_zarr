@@ -2,29 +2,75 @@
 
 Parallelisable Nextflow pipeline that converts large multi-channel TIFF images
 to OME-Zarr using [ngff-zarr](https://github.com/thewtex/ngff-zarr).  
-Each TIFF file is processed as an independent job, making the pipeline
-trivially parallel on an HPC SLURM cluster.
+Point it at a directory of `.tif`, `.tiff`, `.ome.tif`, or `.ome.tiff` files —
+each file is submitted as an independent job, making the pipeline trivially
+parallel on HPC (SLURM) or cloud via [Seqera Platform](https://seqera.io).
 
 ## Requirements
 
 - Nextflow ≥ 24.04
 - One of: conda, Docker, Singularity/Apptainer, or a pre-installed `ngff-zarr`
 
-## Quick start
+## Quick start (command line)
 
 ```bash
 # Local run, conda environment auto-created
 nextflow run main.nf \
   -profile conda \
-  --input '/data/images/*.tiff' \
+  --input_dir '/data/images' \
   --outdir results
 
-# SLURM cluster, singularity container (build first — see below)
+# SLURM cluster + singularity (build container first — see below)
 nextflow run main.nf \
-  -profile small,singularity \
-  --input '/hpc/data/*.ome.tiff' \
+  -profile medium,singularity \
+  --input_dir '/hpc/data/images' \
   --outdir /hpc/results \
   --memory_target 64GB
+```
+
+## Running via Seqera Platform
+
+[Seqera Platform](https://seqera.io) (formerly Nextflow Tower) provides a web UI
+to launch, monitor, and manage pipeline runs on HPC or cloud.
+
+### 1. Add the pipeline
+
+In Seqera Platform → **Launchpad** → **Add pipeline**:
+- **Pipeline**: point to your GitHub/GitLab repo URL for this pipeline
+- **Revision**: branch or tag (e.g. `main`)
+- **Config profiles**: choose your compute profile, e.g. `medium,singularity`
+
+### 2. Configure a Compute Environment
+
+Set up a Compute Environment matching your cluster (SLURM, AWS Batch, Google
+Batch, Azure Batch). Seqera automatically injects `TOWER_ACCESS_TOKEN` —
+no manual token configuration required.
+
+### 3. Launch
+
+In the Launch form, fill in at minimum:
+
+| Parameter | Example value |
+|---|---|
+| `input_dir` | `/stornext/data/project/images` |
+| `outdir` | `/stornext/data/project/results` |
+
+All other parameters are optional and appear in the Seqera launch form
+populated from `nextflow_schema.json`.
+
+### 4. Monitor
+
+Seqera shows per-job status, resource usage, and retry history. Conversion
+logs for each TIFF are published to `outdir/logs/` and surfaced as a report
+in the platform UI via `tower.yml`.
+
+### Manual CLI with Seqera monitoring
+
+```bash
+export TOWER_ACCESS_TOKEN=<your Seqera token>
+nextflow run main.nf -profile medium,singularity \
+  --input_dir '/hpc/data/images' \
+  --outdir results
 ```
 
 ## Profiles
@@ -53,7 +99,7 @@ singularity build ngff-zarr.sif docker-daemon://ngff-zarr:latest
 
 | Parameter | Default | Description |
 |---|---|---|
-| `--input` | *required* | Glob for input TIFF files |
+| `--input_dir` | *required* | Directory containing .tif / .tiff / .ome.tiff files |
 | `--outdir` | `results` | Output directory |
 | `--method` | `itkwasm_gaussian` | Downsampling method |
 | `--ome_zarr_version` | `0.5` | OME-Zarr spec version (0.4 or 0.5) |
@@ -78,6 +124,6 @@ Full parameter reference: `nextflow_schema.json`
 
 ```
 results/
-  zarr/   *.ome.zarr   — converted OME-Zarr stores
+  zarr/   *.ome.zarr   — converted OME-Zarr stores (one per input TIFF)
   logs/   *_convert.log — per-file conversion logs
 ```

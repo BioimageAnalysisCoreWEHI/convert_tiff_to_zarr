@@ -8,12 +8,14 @@
     "input_output_options": {
       "title": "Input/output options",
       "type": "object",
-      "required": ["input", "outdir"],
+      "required": ["input_dir", "outdir"],
       "properties": {
-        "input": {
+        "input_dir": {
           "type": "string",
-          "description": "Glob pattern for input TIFF file(s), e.g. '/data/images/*.tiff'",
-          "help_text": "Supports standard glob wildcards (* and **). Each matched file is converted independently as a separate parallel job."
+          "format": "directory-path",
+          "exists": true,
+          "description": "Directory containing .tif, .tiff, .ome.tif, or .ome.tiff image files",
+          "help_text": "All files ending in .tif or .tiff (including .ome.tif / .ome.tiff) in this directory are discovered automatically. Each file is converted as an independent parallel job."
         },
         "outdir": {
           "type": "string",

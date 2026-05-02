@@ -1,0 +1,3 @@
+reports:
+  "results/logs/*.log":
+    display: "Conversion logs"
