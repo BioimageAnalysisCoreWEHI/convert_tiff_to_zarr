@@ -114,7 +114,7 @@ process CONVERT_TIFF_TO_ZARR {
     set -euo pipefail
 
     # Route ngff-zarr disk cache to imaging storage, not scratch
-    export DASK_TEMPORARY__DIRECTORY="${dask_tmp}"
+    export DASK_TEMPORARY_DIRECTORY="${dask_tmp}"
     mkdir -p "${dask_tmp}"
 
     if ! command -v ngff-zarr &>/dev/null; then
