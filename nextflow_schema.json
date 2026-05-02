@@ -70,12 +70,14 @@
         },
         "codec": {
           "type": "string",
+          "default": "blosc:zstd",
           "description": "Compression codec, e.g. 'blosc:zstd', 'blosc:lz4', 'gzip', 'zstd', 'lz4', 'none'",
-          "help_text": "Defaults to Zarr's built-in default codec."
+          "help_text": "Defaults to blosc:zstd which gives strong compression with fast decode \u2014 keeps OME-Zarr stores small enough to fit on scratch quotas. Use 'none' to disable compression (not recommended for large images)."
         },
         "compression_level": {
           "type": "integer",
-          "description": "Compression level (codec-dependent, e.g. 1–9 for gzip, 1–22 for zstd)"
+          "default": 5,
+          "description": "Compression level (codec-dependent, e.g. 1\u20139 for gzip, 1\u201322 for zstd)"
         },
         "series": {
           "type": "string",

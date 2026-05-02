@@ -5,7 +5,11 @@ nextflow.enable.dsl = 2
 // ---------------------------------------------------------------------------
 params.input_dir        = null   // directory containing .tif / .tiff / .ome.tiff images
 params.outdir           = "results"
-params.publish_dir_mode = "copy"
+// Default to 'move' so the OME-Zarr store is not duplicated between the
+// Nextflow work directory and outdir (huge stores blow out scratch quotas).
+// Use 'copy' if you need to resume / re-run downstream tasks against the
+// same work dir.
+params.publish_dir_mode = "move"
 params.validate_params  = true
 
 // ---------------------------------------------------------------------------
@@ -15,8 +19,11 @@ params.method           = "itkwasm_gaussian"  // see: ngff-zarr --help
 params.ome_zarr_version = "0.5"               // "0.4" or "0.5"
 params.chunks           = null                // e.g. "64"  or  "8 16 32"
 params.chunks_per_shard = null                // e.g. "4"   or  "2 4 8"
-params.codec            = null                // e.g. "blosc:zstd", "gzip", "zstd"
-params.compression_level = null              // e.g. 5
+// Default to zstd via blosc at level 5 \u2014 strong ratio, fast decode, prevents
+// uncompressed pyramids from blowing out scratch quotas. Override with
+// `--codec none` for benchmarking or `--codec gzip` etc.
+params.codec            = "blosc:zstd"
+params.compression_level = 5
 
 // ---------------------------------------------------------------------------
 // ngff-zarr: series selection  (for multi-series OME-TIFFs)
@@ -52,8 +59,8 @@ process CONVERT_TIFF_TO_ZARR {
     tag { tiff_file.name }
     label 'process_medium'
 
-    publishDir "${params.outdir}/zarr", mode: params.publish_dir_mode, saveAs: { new File(it).name }
-    publishDir "${params.outdir}/logs", mode: params.publish_dir_mode
+    publishDir "${params.outdir}/zarr", mode: params.publish_dir_mode, pattern: "*.ome.zarr", saveAs: { new File(it).name }
+    publishDir "${params.outdir}/logs", mode: params.publish_dir_mode, pattern: "*.log"
 
     input:
     path tiff_file

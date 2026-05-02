@@ -105,8 +105,8 @@ singularity build ngff-zarr.sif docker-daemon://ngff-zarr:latest
 | `--ome_zarr_version` | `0.5` | OME-Zarr spec version (0.4 or 0.5) |
 | `--chunks` | auto | Chunk size(s), e.g. `64` or `1 64 64` |
 | `--chunks_per_shard` | none | Zarr v3 sharding (e.g. `4`) |
-| `--codec` | default | Compression codec, e.g. `blosc:zstd` |
-| `--compression_level` | default | Codec-specific level |
+| `--codec` | `blosc:zstd` | Compression codec, e.g. `blosc:zstd`, `gzip`, `none` |
+| `--compression_level` | `5` | Codec-specific level |
 | `--series` | all | Series index or glob for multi-series TIFF |
 | `--memory_target` | auto | ngff-zarr memory budget, e.g. `32GB` |
 | `--cache_dir` | none | Disk cache path for very large datasets |
@@ -127,3 +127,48 @@ results/
   zarr/   *.ome.zarr   — converted OME-Zarr stores (one per input TIFF)
   logs/   *_convert.log — per-file conversion logs
 ```
+
+## Keeping temporary files off `/scratch`
+
+OME-Zarr stores can be huge (often larger than the input TIFF after pyramid
+generation), and Nextflow stages every task in a `work/` directory until the
+pipeline finishes. On clusters with tight `/scratch` quotas this can quickly
+exceed file-count or size limits.
+
+This pipeline is configured to minimise scratch usage:
+
+- **`publish_dir_mode = "move"`** (default) — the `.ome.zarr` store is moved
+  out of `work/` into `outdir`, not duplicated.
+- **`cleanup = true`** in `nextflow.config` — each task's work directory is
+  deleted as soon as it completes successfully.
+- **`process.scratch = false`** — no extra node-local `/tmp` copy.
+- **`workDir`** defaults to `./work` next to where you launched Nextflow,
+  rather than the system default which is often under `/scratch`.
+
+To put the work directory on a larger filesystem entirely:
+
+```bash
+# Option 1: -w flag
+nextflow run main.nf -w /vast/scratch/$USER/nf-work --input_dir ... --outdir ...
+
+# Option 2: env var (also picked up by Seqera Platform)
+export NXF_WORK=/vast/scratch/$USER/nf-work
+nextflow run main.nf --input_dir ... --outdir ...
+```
+
+Also point ngff-zarr's dask disk cache at the same large filesystem (or
+`outdir`, which is the default):
+
+```bash
+nextflow run main.nf \
+  -w /vast/scratch/$USER/nf-work \
+  --cache_dir /vast/scratch/$USER/dask-cache \
+  --input_dir ... --outdir ...
+```
+
+If you set a generous `--memory_target` (e.g. `--memory_target 128GB`) on
+nodes that have the RAM, ngff-zarr will avoid spilling to disk altogether.
+
+> ⚠️ With `publish_dir_mode = "move"` you cannot `-resume` downstream
+> tasks against the same work dir. If you need resume support, override
+> with `--publish_dir_mode copy` and budget twice the disk space.
