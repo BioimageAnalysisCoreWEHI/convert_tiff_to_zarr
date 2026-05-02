@@ -27,7 +27,7 @@ params.series           = null  // int index (0), glob name ("*GFP*"), or null =
 // ngff-zarr: resource hints
 // ---------------------------------------------------------------------------
 params.memory_target    = null   // e.g. "32GB"  — passed to ngff-zarr, not Nextflow
-params.cache_dir        = null   // path for disk caching very large datasets
+params.cache_dir        = null   // path for disk caching very large datasets; defaults to <outdir>/cache
 params.use_tensorstore  = false  // use TensorStore I/O backend
 
 // ---------------------------------------------------------------------------
@@ -80,9 +80,7 @@ process CONVERT_TIFF_TO_ZARR {
         params.memory_target
             ? "--memory-target ${params.memory_target}"
             : null,
-        params.cache_dir
-            ? "--cache-dir ${params.cache_dir}"
-            : null,
+        "--cache-dir ${params.cache_dir ?: "${params.outdir}/cache"}",
         params.codec
             ? "--codec ${params.codec}"
             : null,
